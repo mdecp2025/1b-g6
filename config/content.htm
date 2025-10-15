@@ -1,6 +1,5 @@
 <h1>About</h1>
-<p>good morning everyone!!!</p>
-<p>嚴師出高徒!!!!!!!!!</p>
+<p></p>
 <p>課程名稱: 計算機程式</p>
 <p>示範網站: <a href="https://mde.tw/cp_demo">https://mde.tw/cp_demo</a></p>
 <p>示範倉儲: <a href="https://github.com/mdecycu/cp_demo">https://github.com/mdecycu/cp_demo</a> </p>
@@ -16,7 +15,255 @@
 <p style="padding-left: 60px;">w18: 課程總結</p>
 <p style="padding-left: 30px;"><span style="background-color: #ffff00;">個人與分組網站維護 (40%)</span> - 每週至少兩次推送與課程進度相關的學習內容與心得。</p>
 <p style="padding-left: 60px;">w9 期中自評、w18 期末自評</p>
-<h1>Project</h1>
+<h1>w5</h1>
+<div>長度 (length): <input id="input_length" min="1" type="number" value="15"/> 寬度 (width): <input id="input_width" min="1" type="number" value="20"/> <button id="btn_start">開始</button></div>
+<p><textarea cols="70" id="code_area" rows="15"># 請寫你的控制機器人的程式碼
+def turn_right():
+    r.turn_left()
+    r.turn_left()
+    r.turn_left()
+
+def a():
+    r.move(steps)
+    r.turn_left()
+    r.move(steps1)
+    r.turn_left()
+    r.move(steps)
+    turn_right()
+    r.move(steps1)
+    turn_right()
+
+def aa():
+    for i in range(width // 2):
+        a()
+    if width % 2 == 0:
+        r.move(0)
+    else:
+        r.move(length - 1)
+
+aa()
+</textarea> <br/> <button id="run_code_btn">執行程式</button></p>
+<div id="brython_div1"></div>
+<div id="brython_div1"></div>
+<script src="https://cdn.jsdelivr.net/npm/brython@3.11.0/brython.min.js" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm/brython@3.11.0/brython_stdlib.js" type="text/javascript"></script>
+<script>
+window.onload = function() {
+    brython();
+};
+</script>
+<script type="text/python">
+from browser import document, html, timer
+
+CELL_SIZE = 40
+WALL_THICKNESS = 6
+IMG_PATH = "https://mde.tw/cp2025/reeborg/src/images/"
+
+class World:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.layers = self._create_layers()
+        self._init_html()
+        self._draw_grid()
+        self._draw_walls()
+    def _create_layers(self):
+        return {
+            "grid": html.CANVAS(width=self.width * CELL_SIZE, height=self.height * CELL_SIZE),
+            "walls": html.CANVAS(width=self.width * CELL_SIZE, height=self.height * CELL_SIZE),
+            "objects": html.CANVAS(width=self.width * CELL_SIZE, height=self.height * CELL_SIZE),
+            "robots": html.CANVAS(width=self.width * CELL_SIZE, height=self.height * CELL_SIZE),
+        }
+
+    def _init_html(self):
+        container = html.DIV(style={
+            "position": "relative",
+            "width": f"{self.width * CELL_SIZE}px",
+            "height": f"{self.height * CELL_SIZE}px"
+        })
+        for z, canvas in enumerate(self.layers.values()):
+            canvas.style = {
+                "position": "absolute",
+                "top": "0px",
+                "left": "0px",
+                "zIndex": str(z)
+            }
+            container <= canvas
+        document["brython_div1"].clear()
+        document["brython_div1"] <= container
+    def _draw_grid(self):
+        ctx = self.layers["grid"].getContext("2d")
+        ctx.strokeStyle = "#cccccc"
+        for i in range(self.width + 1):
+            ctx.beginPath()
+            ctx.moveTo(i * CELL_SIZE, 0)
+            ctx.lineTo(i * CELL_SIZE, self.height * CELL_SIZE)
+            ctx.stroke()
+        for j in range(self.height + 1):
+            ctx.beginPath()
+            ctx.moveTo(0, j * CELL_SIZE)
+            ctx.lineTo(self.width * CELL_SIZE, j * CELL_SIZE)
+            ctx.stroke()
+
+    def _draw_image(self, ctx, src, x, y, w, h, offset_x=0, offset_y=0):
+        img = html.IMG()
+        img.src = src
+        def onload(evt):
+            px = x * CELL_SIZE + offset_x
+            py = (self.height - 1 - y) * CELL_SIZE + offset_y
+            ctx.drawImage(img, px, py, w, h)
+        img.bind("load", onload)
+    def _draw_walls(self):
+        ctx = self.layers["walls"].getContext("2d")
+        for x in range(self.width):
+            # 北牆：最上方（貼在頂格子正上緣）
+            self._draw_image(ctx, IMG_PATH + "north.png", x, self.height - 1,
+                             CELL_SIZE, WALL_THICKNESS, offset_y=0)
+            # 南牆：最下方（貼在底格子正下緣）
+            self._draw_image(ctx, IMG_PATH + "north.png", x, 0,
+                             CELL_SIZE, WALL_THICKNESS, offset_y=CELL_SIZE - WALL_THICKNESS)
+        for y in range(self.height):
+            # 西牆：最左邊（貼格子內側左緣）
+            self._draw_image(ctx, IMG_PATH + "east.png", 0, y,
+                             WALL_THICKNESS, CELL_SIZE, offset_x=0)
+            # 東牆：最右邊（貼格子內側右緣）
+            self._draw_image(ctx, IMG_PATH + "east.png", self.width - 1, y,
+                             WALL_THICKNESS, CELL_SIZE, offset_x=CELL_SIZE - WALL_THICKNESS)
+
+    def robot(self, x, y):
+        ctx = self.layers["robots"].getContext("2d")
+        self._draw_image(ctx, IMG_PATH + "blue_robot_e.png", x - 1, y - 1,
+                         CELL_SIZE, CELL_SIZE)
+
+class AnimatedRobot:
+    def __init__(self, world, x, y):
+        self.world = world
+        self.x = x - 1
+        self.y = y - 1
+        self.facing = "E"
+        self.facing_order = ["E", "N", "W", "S"]
+        self.robot_ctx = world.layers["robots"].getContext("2d")
+        self.trace_ctx = world.layers["objects"].getContext("2d")
+        self.queue = []
+        self.running = False
+        self._draw_robot()
+
+    def _robot_image(self):
+        return {
+            "E": "blue_robot_e.png",
+            "N": "blue_robot_n.png",
+            "W": "blue_robot_w.png",
+            "S": "blue_robot_s.png"
+        }[self.facing]
+
+    def _draw_robot(self):
+        self.robot_ctx.clearRect(0, 0, self.world.width * CELL_SIZE, self.world.height * CELL_SIZE)
+        self.world._draw_image(self.robot_ctx, IMG_PATH + self._robot_image(),
+                               self.x, self.y, CELL_SIZE, CELL_SIZE)
+
+    def _draw_trace(self, from_x, from_y, to_x, to_y):
+        ctx = self.trace_ctx
+        ctx.strokeStyle = "#d33"
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        fx = from_x * CELL_SIZE + CELL_SIZE / 2
+        fy = (self.world.height - 1 - from_y) * CELL_SIZE + CELL_SIZE / 2
+        tx = to_x * CELL_SIZE + CELL_SIZE / 2
+        ty = (self.world.height - 1 - to_y) * CELL_SIZE + CELL_SIZE / 2
+        ctx.moveTo(fx, fy)
+        ctx.lineTo(tx, ty)
+        ctx.stroke()
+
+    def move(self, steps):
+        def action(next_done):
+            def step():
+                nonlocal steps
+                if steps == 0:
+                    next_done()
+                    return
+                from_x, from_y = self.x, self.y
+                dx, dy = 0, 0
+                if self.facing == "E":
+                    dx = 1
+                elif self.facing == "W":
+                    dx = -1
+                elif self.facing == "N":
+                    dy = 1
+                elif self.facing == "S":
+                    dy = -1
+                next_x = self.x + dx
+                next_y = self.y + dy
+    
+                # ✅ 邊界檢查
+                if 0 <= next_x < self.world.width and 0 <= next_y < self.world.height:
+                    self.x, self.y = next_x, next_y
+                    self._draw_trace(from_x, from_y, self.x, self.y)
+                    self._draw_robot()
+                    steps -= 1
+                    timer.set_timeout(step, 200)
+                else:
+                    print("🚨 已經撞牆，停止移動！")
+                    next_done()
+            step()
+        self.queue.append(action)
+        self._run_queue()
+
+    def turn_left(self):
+        def action(done):
+            idx = self.facing_order.index(self.facing)
+            self.facing = self.facing_order[(idx + 1) % 4]
+            self._draw_robot()
+            timer.set_timeout(done, 300)
+        self.queue.append(action)
+        self._run_queue()
+
+    def _run_queue(self):
+        if self.running or not self.queue:
+            return
+        self.running = True
+        action = self.queue.pop(0)
+        action(lambda: self._done())
+
+    def _done(self):
+        self.running = False
+        self._run_queue()
+
+
+# 把w和r宣告成全域變數，方便重新建立和使用
+w = None
+r = None
+length = 15
+width = 20
+steps = 0
+steps1 = 1
+
+def start(ev):
+    global w, r, length, width, steps, steps1
+    length = int(document["input_length"].value)
+    width = int(document["input_width"].value)
+    steps = length - 1
+    steps1 = 1
+    w = World(length, width)
+    r = AnimatedRobot(w, 1, 1)
+    # 按開始時只建立世界和機器人，不直接跑動作
+    document["brython_div1"].clear()
+    document["brython_div1"] <= w._init_html()
+    w._draw_grid()
+    w._draw_walls()
+    r._draw_robot()
+
+def run_code(ev):
+    global w, r, length, width, steps, steps1
+    code = document["code_area"].value
+    try:
+        # exec 執行 textarea 裡的程式碼，並且可以使用w, r, length等變數
+        exec(code, globals())
+    except Exception as e:
+        print("程式執行錯誤:", e)
+
+document["btn_start"].bind("click", start)
+document["run_code_btn"].bind("click", run_code)
+</script><h1>Project</h1>
 <p>既存技術:</p>
 <p style="padding-left: 30px;"><a href="https://github.com/scrum-1/respysive-slide">https://github.com/scrum-1/respysive-slide</a></p>
 <p>專案簡介：非同步分散式 Reveal.js 協同簡報編輯系統</p>
@@ -35,7 +282,7 @@ name = "Amy"  # 字串
 pi = 3.14     # 浮點數
 </pre>
 <p><span style="background-color: #ffff99;">二、變數名稱命名規則</span></p>
-<p style="padding-left: 30px;">合法命名：<br/><br/><span style="background-color: #ccffcc;">可以包含字母、數字、底線（_）</span><br/><br/><span style="background-color: #ccffcc;">不能以數字開頭</span><br/><br/><span style="background-color: #ccffcc;">不能使用 Python 保留的關鍵字(35個)</span>:</p>
+<p style="padding-left: 30px;">合法命名：<br/><br/><span style="background-color: #ccffcc;">可以包含字母、數字、底線（_）</span><br/><br/><span style="background-color: #ccffcc;">不能以數字開頭</span><br><br/><span style="background-color: #ccffcc;">不能使用 Python 保留的關鍵字(35個)</span>:</br></p>
 <p style="padding-left: 60px;">['False', 'None', 'True', 'and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue', '<span style="background-color: #ffcc99;">def</span>', 'del', 'elif', '<span style="background-color: #ffcc99;">else</span>', 'except', 'finally', '<span style="background-color: #ffcc99;">for</span>', 'from', 'global', '<span style="background-color: #ffcc99;">if</span>', '<span style="background-color: #ffcc99;">import</span>', 'in', 'is', 'lambda', 'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'try', 'while', 'with', 'yield']</p>
 <p style="padding-left: 30px;">利用 keyword 模組，<a href="https://mde.tw/cp_demo/content/Brython.html?src=https://gist.githubusercontent.com/mdecycu/fa7d2a68d1569596f62e5b7739a83119/raw/da44925c2f9694f825c2525edfc80367f327ca5e/print_keywords.py">列出 Python 所保留的關鍵字</a>:</p>
 <pre class="brush:py;auto-links:false;toolbar:false" contenteditable="false">import keyword
