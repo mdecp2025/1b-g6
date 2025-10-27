@@ -18,19 +18,24 @@
 <h1>w5</h1>
 <div>長度 (length): <input id="input_length" min="1" type="number" value="10"/> 寬度 (width): <input id="input_width" min="1" type="number" value="10"/> <button id="btn_start">開始</button></div>
 <p><textarea cols="70" id="code_area" rows="15"># 請寫你的控制機器人的程式碼
+# r.disable_trace()可以單獨關閉畫線功能
+# r.enable_trace()可以單獨開啟畫線功能
+# r.move2()不會畫線
+
+
 def turn_right():
     r.turn_left()
     r.turn_left()
     r.turn_left()
 
 # 先不畫線，走前半段
-r.disable_trace()
+#r.disable_trace()
 r.move(4)
 r.turn_left()
 r.move(4)
 
 # 開始畫線，走後半段
-r.enable_trace()
+#r.enable_trace()
 r.move(1)
 turn_right()
 r.move(1)
@@ -140,7 +145,7 @@ class AnimatedRobot:
         self.trace_ctx = world.layers["objects"].getContext("2d")
         self.queue = []
         self.running = False
-        self.show_trace = False   # 預設不畫線
+        self.show_trace = True   # 預設畫線
         self._draw_robot()
 
     def _robot_image(self):
@@ -218,6 +223,42 @@ class AnimatedRobot:
         self.queue.append(action)
         self._run_queue()
 
+    def move2(self, steps):
+        def action(next_done):
+            def step():
+                nonlocal steps
+                if steps == 0:
+                    next_done()
+                    return
+                from_x, from_y = self.x, self.y
+                dx, dy = 0, 0
+                if self.facing == "E":
+                    dx = 1
+                elif self.facing == "W":
+                    dx = -1
+                elif self.facing == "N":
+                    dy = 1
+                elif self.facing == "S":
+                    dy = -1
+                next_x = self.x + dx
+                next_y = self.y + dy
+
+                if 0 <= next_x < self.world.width and 0 <= next_y < self.world.height:
+                    self.x, self.y = next_x, next_y
+
+                # ✅ move2 不畫線，直接跳過 trace
+                # self._draw_trace(from_x, from_y, self.x, self.y)  ← 把這行拿掉
+
+                    self._draw_robot()
+                    steps -= 1
+                    timer.set_timeout(step, 200)
+                else:
+                        print("🚨 已經撞牆，停止移動！")
+                        next_done()
+            step()
+        self.queue.append(action)
+        self._run_queue()
+
     def turn_left(self):
         def action(done):
             idx = self.facing_order.index(self.facing)
@@ -256,7 +297,7 @@ def start(ev):
 
     w = World(length, width)
     r = AnimatedRobot(w, 1, 1)
-    r.disable_trace()  # 預設不畫線
+    r.enable_trace()  # 預設不畫線
 
 def run_code(ev):
     global w, r, length, width, steps, steps1
@@ -287,7 +328,7 @@ name = "Amy"  # 字串
 pi = 3.14     # 浮點數
 </pre>
 <p><span style="background-color: #ffff99;">二、變數名稱命名規則</span></p>
-<p style="padding-left: 30px;">合法命名：<br/><br/><span style="background-color: #ccffcc;">可以包含字母、數字、底線（_）</span><br/><br/><span style="background-color: #ccffcc;">不能以數字開頭</span><br><br/><span style="background-color: #ccffcc;">不能使用 Python 保留的關鍵字(35個)</span>:</br></p>
+<p style="padding-left: 30px;">合法命名：<br/><br/><span style="background-color: #ccffcc;">可以包含字母、數字、底線（_）</span><br/><br/><span style="background-color: #ccffcc;">不能以數字開頭</span><br/><br/><span style="background-color: #ccffcc;">不能使用 Python 保留的關鍵字(35個)</span>:</p>
 <p style="padding-left: 60px;">['False', 'None', 'True', 'and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue', '<span style="background-color: #ffcc99;">def</span>', 'del', 'elif', '<span style="background-color: #ffcc99;">else</span>', 'except', 'finally', '<span style="background-color: #ffcc99;">for</span>', 'from', 'global', '<span style="background-color: #ffcc99;">if</span>', '<span style="background-color: #ffcc99;">import</span>', 'in', 'is', 'lambda', 'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'try', 'while', 'with', 'yield']</p>
 <p style="padding-left: 30px;">利用 keyword 模組，<a href="https://mde.tw/cp_demo/content/Brython.html?src=https://gist.githubusercontent.com/mdecycu/fa7d2a68d1569596f62e5b7739a83119/raw/da44925c2f9694f825c2525edfc80367f327ca5e/print_keywords.py">列出 Python 所保留的關鍵字</a>:</p>
 <pre class="brush:py;auto-links:false;toolbar:false" contenteditable="false">import keyword
